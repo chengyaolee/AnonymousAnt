@@ -48,3 +48,8 @@ func (t *WindowsTUN) WritePacket(buf *buffer.PacketBuffer) error {
 func (t *WindowsTUN) Close() error {
 	return nil
 }
+
+// ConfigureIP is a stub for Windows Wintun IP configuration.
+func ConfigureIP(ifName, localIP, remoteIP string) error {
+	return nil
+}

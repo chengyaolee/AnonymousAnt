@@ -8,6 +8,12 @@
 *.so
 *.dylib
 bin/
+build/dist/
+.DS_Store
+/antserver
+/antclient
+/ant-daemon
+/ant-ui
 
 # Test binary, built with `go test -c`
 *.test

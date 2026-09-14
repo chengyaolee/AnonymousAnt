@@ -100,3 +100,10 @@ func (t *LinuxTUN) WritePacket(buf *buffer.PacketBuffer) error {
 func (t *LinuxTUN) Close() error {
 	return t.file.Close()
 }
+
+// ConfigureIP configures virtual IP addresses and brings up the interface on Linux.
+func ConfigureIP(ifName, localIP, remoteIP string) error {
+	_ = exec.Command("ip", "addr", "add", localIP+"/24", "peer", remoteIP, "dev", ifName).Run()
+	cmd := exec.Command("ip", "link", "set", "dev", ifName, "up")
+	return cmd.Run()
+}

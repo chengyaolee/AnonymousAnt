@@ -6,7 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
@@ -69,9 +69,7 @@ func main() {
 	} else {
 		defer tunDev.Close()
 		security.Info("TUN interface created: %s", tunDev.Name())
-		if runtime.GOOS == "darwin" {
-			_ = tun.ConfigureIP(tunDev.Name(), *virtualIP, *peerIP)
-		}
+		_ = tun.ConfigureIP(tunDev.Name(), *virtualIP, *peerIP)
 	}
 
 	sessionMgr := protocol.NewSessionManager()
@@ -105,6 +103,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	peerTable := NewPeerTable()
+
 	// TUN Egress loop (from TUN to network clients)
 	if tunDev != nil {
 		go func() {
@@ -115,9 +115,19 @@ func main() {
 					return
 				}
 
-				// Look up active peer session and transmit
-				// For now in single-user exit mode, transmit to most recently active session
-				// Production supports multi-peer routing table
+				var peer *ClientPeer
+				if buf.Length >= 20 && buf.Bytes()[0]>>4 == 4 {
+					dstIP := net.IP(buf.Bytes()[16:20]).String()
+					peer = peerTable.Lookup(dstIP)
+				} else {
+					peer = peerTable.Lookup("")
+				}
+
+				if peer != nil && peer.Session != nil && peer.Transport != nil {
+					if err := peer.Session.EncryptPacket(buf, protocol.TypeData, 0); err == nil {
+						_ = peer.Transport.Send(buf, peer.RemoteAddr)
+					}
+				}
 				buffer.Put(buf)
 			}
 		}()
@@ -134,7 +144,7 @@ func main() {
 					return
 				}
 
-				handleIncomingPacket(t, raddr, buf, serverPriv, sessionMgr, tunDev)
+				handleIncomingPacket(t, raddr, buf, serverPriv, sessionMgr, peerTable, tunDev, *peerIP)
 			}
 		}(tr)
 	}
@@ -147,13 +157,65 @@ func main() {
 	security.Info("Shutting down AnonymousAnt Server. Zeroing all memory.")
 }
 
+// ClientPeer tracks an active peer's virtual IP, session, and network address for return routing.
+type ClientPeer struct {
+	Session    *protocol.Session
+	Transport  transport.Transport
+	RemoteAddr net.Addr
+	VirtualIP  string
+	LastActive time.Time
+}
+
+// PeerTable maps virtual IP addresses (e.g. 10.8.0.2) to client sessions.
+type PeerTable struct {
+	mu         sync.RWMutex
+	peersByIP  map[string]*ClientPeer
+	lastActive *ClientPeer
+}
+
+func NewPeerTable() *PeerTable {
+	return &PeerTable{
+		peersByIP: make(map[string]*ClientPeer),
+	}
+}
+
+func (pt *PeerTable) Register(ip string, session *protocol.Session, tr transport.Transport, raddr net.Addr) {
+	pt.mu.Lock()
+	defer pt.mu.Unlock()
+
+	peer, exists := pt.peersByIP[ip]
+	if !exists {
+		peer = &ClientPeer{
+			VirtualIP: ip,
+		}
+		pt.peersByIP[ip] = peer
+	}
+	peer.Session = session
+	peer.Transport = tr
+	peer.RemoteAddr = raddr
+	peer.LastActive = time.Now()
+	pt.lastActive = peer
+}
+
+func (pt *PeerTable) Lookup(ip string) *ClientPeer {
+	pt.mu.RLock()
+	defer pt.mu.RUnlock()
+
+	if peer, ok := pt.peersByIP[ip]; ok {
+		return peer
+	}
+	return pt.lastActive
+}
+
 func handleIncomingPacket(
 	tr transport.Transport,
 	raddr net.Addr,
 	buf *buffer.PacketBuffer,
 	serverPriv *crypto.PrivateKey,
 	sessionMgr *protocol.SessionManager,
+	peerTable *PeerTable,
 	tunDev tun.Device,
+	defaultPeerIP string,
 ) {
 	defer buffer.Put(buf)
 
@@ -175,6 +237,7 @@ func handleIncomingPacket(
 		}
 
 		sessionMgr.Register(session)
+		peerTable.Register(defaultPeerIP, session, tr, raddr)
 		security.Info("Handshake established with new client session index=%d", serverIndex)
 
 		// Send handshake response back
@@ -205,6 +268,14 @@ func handleIncomingPacket(
 
 	switch h.Type {
 	case protocol.TypeData:
+		// Learn client IP address from packet source
+		if buf.Length >= 20 && buf.Bytes()[0]>>4 == 4 {
+			srcIP := net.IP(buf.Bytes()[12:16]).String()
+			peerTable.Register(srcIP, session, tr, raddr)
+		} else {
+			peerTable.Register(defaultPeerIP, session, tr, raddr)
+		}
+
 		// Forward raw IP packet into TUN interface
 		if tunDev != nil {
 			_ = tunDev.WritePacket(buf)
@@ -212,6 +283,7 @@ func handleIncomingPacket(
 	case protocol.TypeKeepalive:
 		// Heartbeat packet to maintain NAT hole punching
 		session.LastActive.Store(time.Now().UnixNano())
+		peerTable.Register(defaultPeerIP, session, tr, raddr)
 	case protocol.TypeDisconnect:
 		sessionMgr.Remove(h.ReceiverIndex)
 		security.Info("Client disconnected cleanly")
