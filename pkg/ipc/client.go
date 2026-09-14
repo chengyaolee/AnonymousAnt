@@ -14,13 +14,14 @@ type Client struct {
 	enc  *json.Encoder
 }
 
-// NewClient connects to the daemon's local IPC socket.
+// NewClient connects to the daemon's local IPC socket or loopback port.
 func NewClient(socketPath string) (*Client, error) {
 	if socketPath == "" {
 		socketPath = DefaultSocketPath
 	}
 
-	conn, err := net.Dial("unix", socketPath)
+	network, addr := getNetworkAndAddr(socketPath)
+	conn, err := net.Dial(network, addr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to AnonymousAnt daemon: %w", err)
 	}

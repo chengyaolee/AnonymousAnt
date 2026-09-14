@@ -51,3 +51,27 @@ func TestIPCCommunication(t *testing.T) {
 		t.Fatalf("unexpected status returned: %+v", status)
 	}
 }
+
+func TestIPCTCPCommunication(t *testing.T) {
+	addr := "127.0.0.1:47829"
+	server, err := NewServer(addr, &echoHandler{})
+	if err != nil {
+		t.Fatalf("failed to start tcp ipc server: %v", err)
+	}
+	defer server.Close()
+
+	client, err := NewClient(addr)
+	if err != nil {
+		t.Fatalf("failed to connect tcp ipc client: %v", err)
+	}
+	defer client.Close()
+
+	status, err := client.GetStatus()
+	if err != nil {
+		t.Fatalf("failed to get status over tcp: %v", err)
+	}
+
+	if !status.Connected || status.Transport != "tls" || status.MemoryAllocMB != 12.5 {
+		t.Fatalf("unexpected status returned: %+v", status)
+	}
+}

@@ -271,8 +271,11 @@
         </div>
       </div>
 
-      <div id="daemonBanner" style="display:none; width: 100%; padding: 10px 14px; background: rgba(248, 81, 73, 0.15); border: 1px solid var(--danger); border-radius: 8px; font-size: 0.78rem; color: #ff7b72; text-align: center;">
-        ⚠️ <strong>Daemon is offline.</strong> Run <code>sudo ./bin/ant-daemon</code> in your terminal to start the privileged service.
+      <div id="daemonBanner" style="display:none; width: 100%; padding: 12px 16px; background: rgba(248, 81, 73, 0.12); border: 1px solid var(--danger); border-radius: 10px; font-size: 0.8rem; color: #ff7b72; text-align: center;">
+        <div style="margin-bottom: 8px;">⚠️ <strong>Privileged Daemon is offline</strong></div>
+        <button id="startDaemonBtn" onclick="startDaemon()" style="background: #2ea043; color: #fff; border: none; border-radius: 6px; padding: 7px 16px; font-weight: 600; cursor: pointer; font-size: 0.8rem;">
+          ⚡ Authorize & Start Daemon
+        </button>
       </div>
 
       <div class="config-card">
@@ -440,6 +443,31 @@
         const upMB = (status.bytes_sent / (1024*1024)).toFixed(1);
         document.getElementById("trafficMetric").textContent = `${downMB} / ${upMB} MB`;
         document.getElementById("memoryMetric").textContent = `${status.memory_alloc_mb.toFixed(1)} MB`;
+      }
+    }
+
+    async function startDaemon() {
+      const btn = document.getElementById("startDaemonBtn");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "⏳ Requesting System Permission...";
+      }
+      try {
+        const res = await fetch("/api/start-daemon", { method: "POST" });
+        const data = await res.json();
+        if (!data.success) {
+          alert("Could not start daemon: " + (data.error || "Permission prompt cancelled"));
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "⚡ Authorize & Start Daemon";
+          }
+        }
+      } catch (e) {
+        alert("Error requesting daemon launch: " + e);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "⚡ Authorize & Start Daemon";
+        }
       }
     }
 

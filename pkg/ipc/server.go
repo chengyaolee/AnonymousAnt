@@ -6,14 +6,28 @@ import (
 	"io"
 	"net"
 	"os"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/chengyaolee/AnonymousAnt/pkg/security"
 )
 
-const (
-	DefaultSocketPath = "/tmp/anonymousant.sock"
-)
+var DefaultSocketPath = defaultSocket()
+
+func defaultSocket() string {
+	if runtime.GOOS == "windows" {
+		return "127.0.0.1:47821"
+	}
+	return "/tmp/anonymousant.sock"
+}
+
+func getNetworkAndAddr(path string) (string, string) {
+	if strings.Contains(path, ":") {
+		return "tcp", path
+	}
+	return "unix", path
+}
 
 // Handler processes an incoming IPC request.
 type Handler interface {
@@ -29,22 +43,27 @@ type Server struct {
 	closed   chan struct{}
 }
 
-// NewServer creates and binds a local Unix domain socket IPC listener.
+// NewServer creates and binds a local Unix domain socket or loopback TCP IPC listener.
 func NewServer(socketPath string, handler Handler) (*Server, error) {
 	if socketPath == "" {
 		socketPath = DefaultSocketPath
 	}
 
-	// Remove old socket file if present
-	_ = os.Remove(socketPath)
+	network, addr := getNetworkAndAddr(socketPath)
+	if network == "unix" {
+		// Remove old socket file if present
+		_ = os.Remove(addr)
+	}
 
-	ln, err := net.Listen("unix", socketPath)
+	ln, err := net.Listen(network, addr)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set permissions so unprivileged users can communicate with the daemon
-	_ = os.Chmod(socketPath, 0666)
+	if network == "unix" {
+		// Set permissions so unprivileged users can communicate with the daemon
+		_ = os.Chmod(addr, 0666)
+	}
 
 	s := &Server{
 		path:     socketPath,
@@ -107,6 +126,9 @@ func (s *Server) Close() error {
 	}
 
 	err := s.listener.Close()
-	_ = os.Remove(s.path)
+	network, addr := getNetworkAndAddr(s.path)
+	if network == "unix" {
+		_ = os.Remove(addr)
+	}
 	return err
 }
