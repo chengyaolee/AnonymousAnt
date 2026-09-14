@@ -271,15 +271,31 @@
         </div>
       </div>
 
+      <div id="daemonBanner" style="display:none; width: 100%; padding: 10px 14px; background: rgba(248, 81, 73, 0.15); border: 1px solid var(--danger); border-radius: 8px; font-size: 0.78rem; color: #ff7b72; text-align: center;">
+        ⚠️ <strong>Daemon is offline.</strong> Run <code>sudo ./bin/ant-daemon</code> in your terminal to start the privileged service.
+      </div>
+
       <div class="config-card">
         <div class="form-group">
-          <label>CONNECTION URL OR SERVER</label>
-          <input id="serverAddr" type="text" placeholder="127.0.0.1:8443 or ant://..." value="127.0.0.1:8443">
+          <label>SERVER PRESET / REGION</label>
+          <select id="serverPreset" onchange="applyPreset()">
+            <option value="custom">🔗 Custom ant:// URL or Remote Host</option>
+            <option value="singapore">🇸🇬 Singapore Exit Node (Remote Cloud)</option>
+            <option value="local">💻 Localhost Test Exit Node (127.0.0.1:8443)</option>
+          </select>
         </div>
 
         <div class="form-group">
-          <label>SERVER PUBLIC KEY (BASE64)</label>
-          <input id="serverKey" type="text" placeholder="Curve25519 Public Key">
+          <label>
+            <span>CONNECTION URL OR SERVER ADDRESS</span>
+            <span id="urlBadge" style="display:none; color: var(--accent);">✓ ant:// detected</span>
+          </label>
+          <input id="serverAddr" type="text" placeholder="ant://<key>@<host>:8443?obfs=tls or 127.0.0.1:8443" oninput="handleURLInput()">
+        </div>
+
+        <div class="form-group">
+          <label>SERVER PUBLIC KEY (CURVE25519 BASE64)</label>
+          <input id="serverKey" type="text" placeholder="Base64 public key from server output">
         </div>
 
         <div class="form-group">
@@ -307,26 +323,89 @@
           </label>
         </div>
       </div>
+
+      <div id="sgDrawer" style="display:none; width: 100%; background: #161b22; border: 1px dashed var(--border); border-radius: 8px; padding: 12px; font-size: 0.78rem; color: var(--text-muted);">
+        <strong style="color: #fff;">🇸🇬 How to Tunnel to Singapore:</strong><br>
+        1. Deploy <code>antserver</code> on any Singapore VPS (AWS, DigitalOcean, Hetzner, etc.):<br>
+        &nbsp;&nbsp;<code>curl -sSL https://raw.githubusercontent.com/chengyaolee/AnonymousAnt/main/deploy/singapore/setup.sh | sudo bash</code><br>
+        2. Copy the generated <code>ant://...</code> URL from the terminal.<br>
+        3. Paste it above and click <strong>CONNECT</strong>!
+      </div>
     </div>
 
     <div class="footer">
       <div><span id="pulseDot" class="pulse-dot"></span><span id="footerText">Zero-Logging RAM Mode</span></div>
-      <div>v1.0.0 • Pure Go</div>
+      <div>v1.1.0 • Pure Go</div>
     </div>
   </div>
 
   <script>
     let isConnected = false;
+    let daemonOnline = false;
+
+    function applyPreset() {
+      const preset = document.getElementById("serverPreset").value;
+      const drawer = document.getElementById("sgDrawer");
+      if (preset === "singapore") {
+        drawer.style.display = "block";
+        document.getElementById("serverAddr").placeholder = "ant://<sg_key>@<sg_server_ip>:8443?obfs=tls";
+      } else if (preset === "local") {
+        drawer.style.display = "none";
+        document.getElementById("serverAddr").value = "127.0.0.1:8443";
+        document.getElementById("transportMode").value = "tls";
+      } else {
+        drawer.style.display = "none";
+      }
+    }
+
+    function handleURLInput() {
+      const input = document.getElementById("serverAddr").value.trim();
+      const badge = document.getElementById("urlBadge");
+      if (input.startsWith("ant://")) {
+        badge.style.display = "inline";
+        parseAndApplyURL(input);
+      } else {
+        badge.style.display = "none";
+      }
+    }
+
+    function parseAndApplyURL(url) {
+      try {
+        const raw = url.replace("ant://", "");
+        const [key, rest] = raw.split("@");
+        document.getElementById("serverKey").value = key;
+
+        let host = rest;
+        let transport = "tls";
+        if (rest.includes("?")) {
+          const [h, query] = rest.split("?");
+          host = h;
+          query.split("&").forEach(param => {
+            const [k, v] = param.split("=");
+            if (k === "obfs") transport = v;
+          });
+        }
+        document.getElementById("serverAddr").value = host;
+        document.getElementById("transportMode").value = transport;
+      } catch (e) {
+        console.warn("Could not parse ant:// URL:", e);
+      }
+    }
 
     // Listen to real-time telemetry events from daemon
     const evtSource = new EventSource("/api/events");
     evtSource.onmessage = function(event) {
       try {
         const data = JSON.parse(event.data);
+        const banner = document.getElementById("daemonBanner");
         if (!data.daemon_running) {
+          daemonOnline = false;
+          banner.style.display = "block";
           updateUI(false, "DAEMON OFFLINE");
           return;
         }
+        daemonOnline = true;
+        banner.style.display = "none";
         if (data.status) {
           const s = data.status;
           updateUI(s.connected, s.connected ? "CONNECTED" : "READY", s);
@@ -371,17 +450,21 @@
       if (isConnected) {
         await fetch("/api/disconnect", { method: "POST" });
       } else {
-        const serverAddrInput = document.getElementById("serverAddr").value.trim();
-        let serverAddr = serverAddrInput;
-        let serverKey = document.getElementById("serverKey").value.trim();
-        let transport = document.getElementById("transportMode").value;
+        const serverAddr = document.getElementById("serverAddr").value.trim();
+        const serverKey = document.getElementById("serverKey").value.trim();
+        const transport = document.getElementById("transportMode").value;
 
-        // Parse ant:// URL if pasted
-        if (serverAddrInput.startsWith("ant://")) {
-          const raw = serverAddrInput.replace("ant://", "");
-          const [key, host] = raw.split("@");
-          serverKey = key;
-          serverAddr = host.split("?")[0];
+        if (!daemonOnline) {
+          alert("Cannot connect: Background ant-daemon is not running.\n\nPlease open a terminal and run:\n  sudo ./bin/ant-daemon");
+          btn.disabled = false;
+          return;
+        }
+
+        if (!serverKey) {
+          alert("Server Public Key is required.\n\nPlease provide an ant:// connection URL or paste the server's public key from the antserver output.");
+          document.getElementById("serverKey").focus();
+          btn.disabled = false;
+          return;
         }
 
         const params = {

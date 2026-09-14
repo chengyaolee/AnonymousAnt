@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -24,6 +23,7 @@ import (
 func main() {
 	serverAddr := flag.String("server", "127.0.0.1:8443", "Server host:port")
 	serverKeyStr := flag.String("key", "", "Server Curve25519 public key (base64 or hex)")
+	urlFlag := flag.String("url", "", "Full ant:// connection URL (e.g. ant://<pubkey>@<host>:8443?obfs=tls)")
 	transMode := flag.String("transport", "tls", "Transport mode: 'tls' (chameleon port 443), 'udp', or 'ws'")
 	sni := flag.String("sni", "gateway.internal", "SNI hostname for TLS masquerading")
 	tunName := flag.String("tun", "ant1", "Local TUN device name")
@@ -40,8 +40,28 @@ func main() {
 		security.SetLogLevel(security.LevelInfo)
 	}
 
+	rawURL := *urlFlag
+	if rawURL == "" && len(flag.Args()) > 0 && strings.HasPrefix(flag.Arg(0), "ant://") {
+		rawURL = flag.Arg(0)
+	}
+	if rawURL != "" {
+		pk, h, tm, sn, err := ParseURL(rawURL)
+		if err != nil {
+			security.Error("Invalid ant:// URL: %v", err)
+			os.Exit(1)
+		}
+		*serverKeyStr = pk
+		*serverAddr = h
+		if tm != "" {
+			*transMode = tm
+		}
+		if sn != "" {
+			*sni = sn
+		}
+	}
+
 	if *serverKeyStr == "" {
-		fmt.Println("Error: -key (server public key) is required")
+		fmt.Println("Error: -key (server public key) or -url (ant://...) is required")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -143,16 +163,18 @@ func main() {
 	} else {
 		defer tunDev.Close()
 		security.Info("TUN interface established: %s", tunDev.Name())
-		if runtime.GOOS == "darwin" {
-			_ = tun.ConfigureIP(tunDev.Name(), *localIP, *serverIP)
-		}
+		_ = tun.ConfigureIP(tunDev.Name(), *localIP, *serverIP)
 	}
 
 	// 4. Configure OS routing and Kill Switch if requested
 	var rtr router.Router
 	var ks *security.KillSwitch
 	if *enableRoutes && tunDev != nil {
-		host, portStr, _ := net.SplitHostPort(*serverAddr)
+		host, portStr, err := net.SplitHostPort(*serverAddr)
+		if err != nil {
+			host = *serverAddr
+			portStr = "8443"
+		}
 		port, _ := strconv.Atoi(portStr)
 		rtr = router.NewPlatformRouter()
 		_ = rtr.SetupRoutes(tunDev.Name(), host, "")

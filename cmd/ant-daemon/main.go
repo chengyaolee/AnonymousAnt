@@ -143,7 +143,7 @@ func (d *DaemonState) handleConnect(params ipc.ConnectParams) ipc.Response {
 	tunDev, err := tun.CreateTUN("ant0", tun.DefaultMTU)
 	if err != nil {
 		security.Warn("TUN creation warning: %v", err)
-	} else if runtime.GOOS == "darwin" {
+	} else {
 		_ = tun.ConfigureIP(tunDev.Name(), "10.8.0.2", "10.8.0.1")
 	}
 
@@ -157,7 +157,11 @@ func (d *DaemonState) handleConnect(params ipc.ConnectParams) ipc.Response {
 
 	// Setup Routes and Kill Switch
 	if tunDev != nil {
-		host, portStr, _ := net.SplitHostPort(params.ServerAddr)
+		host, portStr, err := net.SplitHostPort(params.ServerAddr)
+		if err != nil {
+			host = params.ServerAddr
+			portStr = "8443"
+		}
 		port, _ := strconv.Atoi(portStr)
 		d.router = router.NewPlatformRouter()
 		_ = d.router.SetupRoutes(tunDev.Name(), host, "")
