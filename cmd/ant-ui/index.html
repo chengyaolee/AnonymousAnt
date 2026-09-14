@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AnonymousAnt — High-Speed Ephemeral VPN</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --accent: #2ea043;
+      --accent-glow: rgba(46, 160, 67, 0.4);
+      --danger: #f85149;
+      --danger-glow: rgba(248, 81, 73, 0.4);
+      --primary: #58a6ff;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    .header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: #fff;
+    }
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #58a6ff, #2ea043);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: #21262d;
+      color: var(--text-muted);
+    }
+    .status-badge.connected {
+      background: rgba(46, 160, 67, 0.15);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .status-badge.connecting {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+    .main-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+    .toggle-container {
+      position: relative;
+      margin: 10px 0;
+    }
+    .power-btn {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      border: 3px solid var(--border);
+      background: #0d1117;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .power-btn:hover {
+      border-color: var(--text-muted);
+      transform: scale(1.03);
+    }
+    .power-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 32px var(--accent-glow);
+    }
+    .power-icon {
+      font-size: 32px;
+    }
+    .power-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .metrics-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .metric-card {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+    .metric-title {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .metric-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 4px;
+    }
+    .config-card {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+    }
+    input, select {
+      background: #161b22;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: #fff;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: var(--primary);
+    }
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 4px;
+    }
+    .toggle-row span {
+      font-size: 0.82rem;
+      font-weight: 500;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #30363d;
+      transition: .3s;
+      border-radius: 22px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(18px); }
+    .footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      background: #0d1117;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      background: var(--text-muted);
+    }
+    .pulse-dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="header">
+      <div class="brand">
+        <div class="brand-icon">🐜</div>
+        <span>AnonymousAnt</span>
+      </div>
+      <div id="statusBadge" class="status-badge">DISCONNECTED</div>
+    </div>
+
+    <div class="main-body">
+      <div class="toggle-container">
+        <button id="powerBtn" class="power-btn" onclick="toggleConnect()">
+          <span class="power-icon">⚡</span>
+          <span id="powerText" class="power-label">CONNECT</span>
+        </button>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-title">Download / Upload</div>
+          <div id="trafficMetric" class="metric-value">0 / 0 MB</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Resident RAM</div>
+          <div id="memoryMetric" class="metric-value">< 12 MB</div>
+        </div>
+      </div>
+
+      <div class="config-card">
+        <div class="form-group">
+          <label>CONNECTION URL OR SERVER</label>
+          <input id="serverAddr" type="text" placeholder="127.0.0.1:8443 or ant://..." value="127.0.0.1:8443">
+        </div>
+
+        <div class="form-group">
+          <label>SERVER PUBLIC KEY (BASE64)</label>
+          <input id="serverKey" type="text" placeholder="Curve25519 Public Key">
+        </div>
+
+        <div class="form-group">
+          <label>STEALTH TRANSPORT</label>
+          <select id="transportMode">
+            <option value="tls">🛡️ Stealth Shield (Port 443 TLS 1.3 Masquerade)</option>
+            <option value="udp">🚀 Direct Datagram (UDP / WireGuard Speed)</option>
+            <option value="ws">🌐 CDN Chameleon (WebSocket over HTTPS)</option>
+          </select>
+        </div>
+
+        <div class="toggle-row">
+          <span>OS Firewall Kill Switch</span>
+          <label class="switch">
+            <input id="killSwitch" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <span>Anti-DPI Packet Padding</span>
+          <label class="switch">
+            <input id="blockPadding" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div><span id="pulseDot" class="pulse-dot"></span><span id="footerText">Zero-Logging RAM Mode</span></div>
+      <div>v1.0.0 • Pure Go</div>
+    </div>
+  </div>
+
+  <script>
+    let isConnected = false;
+
+    // Listen to real-time telemetry events from daemon
+    const evtSource = new EventSource("/api/events");
+    evtSource.onmessage = function(event) {
+      try {
+        const data = JSON.parse(event.data);
+        if (!data.daemon_running) {
+          updateUI(false, "DAEMON OFFLINE");
+          return;
+        }
+        if (data.status) {
+          const s = data.status;
+          updateUI(s.connected, s.connected ? "CONNECTED" : "READY", s);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    function updateUI(connected, statusText, status) {
+      isConnected = connected;
+      const btn = document.getElementById("powerBtn");
+      const badge = document.getElementById("statusBadge");
+      const pText = document.getElementById("powerText");
+      const dot = document.getElementById("pulseDot");
+
+      badge.textContent = statusText;
+      if (connected) {
+        btn.classList.add("active");
+        badge.className = "status-badge connected";
+        pText.textContent = "DISCONNECT";
+        dot.className = "pulse-dot active";
+      } else {
+        btn.classList.remove("active");
+        badge.className = "status-badge";
+        pText.textContent = "CONNECT";
+        dot.className = "pulse-dot";
+      }
+
+      if (status) {
+        const downMB = (status.bytes_received / (1024*1024)).toFixed(1);
+        const upMB = (status.bytes_sent / (1024*1024)).toFixed(1);
+        document.getElementById("trafficMetric").textContent = `${downMB} / ${upMB} MB`;
+        document.getElementById("memoryMetric").textContent = `${status.memory_alloc_mb.toFixed(1)} MB`;
+      }
+    }
+
+    async function toggleConnect() {
+      const btn = document.getElementById("powerBtn");
+      btn.disabled = true;
+
+      if (isConnected) {
+        await fetch("/api/disconnect", { method: "POST" });
+      } else {
+        const serverAddrInput = document.getElementById("serverAddr").value.trim();
+        let serverAddr = serverAddrInput;
+        let serverKey = document.getElementById("serverKey").value.trim();
+        let transport = document.getElementById("transportMode").value;
+
+        // Parse ant:// URL if pasted
+        if (serverAddrInput.startsWith("ant://")) {
+          const raw = serverAddrInput.replace("ant://", "");
+          const [key, host] = raw.split("@");
+          serverKey = key;
+          serverAddr = host.split("?")[0];
+        }
+
+        const params = {
+          server_addr: serverAddr,
+          server_pub_key: serverKey,
+          transport: transport,
+          enable_kill_switch: document.getElementById("killSwitch").checked,
+          block_padding: document.getElementById("blockPadding").checked
+        };
+
+        const res = await fetch("/api/connect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(params)
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert("Connection failed: " + data.error);
+        }
+      }
+
+      setTimeout(() => { btn.disabled = false; }, 500);
+    }
+  </script>
+</body>
+</html>
