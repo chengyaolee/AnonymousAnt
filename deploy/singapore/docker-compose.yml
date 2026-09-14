@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  antserver-singapore:
+    build:
+      context: ../..
+      dockerfile: deploy/singapore/Dockerfile
+    container_name: antserver-sg
+    restart: always
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "51820:51820/udp"
+      - "8443:8443/tcp"
+    environment:
+      - VIRTUAL_IP=10.8.0.1
+      - PEER_IP=10.8.0.2
+    sysctls:
+      - net.ipv4.ip_forward=1

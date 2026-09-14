@@ -98,6 +98,10 @@ This automatically launches your browser to `http://127.0.0.1:47820` with the li
 
 ### Running the CLI Client (Headless)
 ```bash
+# Connect using ant:// URL
+sudo ./bin/antclient -url "ant://<KEY>@<SERVER_HOST>:8443?obfs=tls" -routes
+
+# Or using explicit flags
 sudo ./bin/antclient \
   -server <SERVER_HOST>:8443 \
   -key <SERVER_PUBLIC_KEY> \
@@ -105,6 +109,23 @@ sudo ./bin/antclient \
   -routes \
   -killswitch
 ```
+
+---
+
+## 🇸🇬 Tunneling to Singapore (or Any Country)
+
+To tunnel your traffic through Singapore (giving your device a genuine Singapore IP address):
+1. **Deploy in Singapore** (1-command installer on any Ubuntu/Debian Singapore VPS e.g. DigitalOcean, AWS, Hetzner):
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/chengyaolee/AnonymousAnt/main/deploy/singapore/setup.sh | sudo bash
+   ```
+2. **Copy the `ant://...` URL** printed in the terminal.
+3. **Connect** from your device:
+   * **Desktop UI**: Open `ant-ui`, paste the `ant://` URL, click **CONNECT**.
+   * **CLI**: `sudo ./bin/antclient -url "ant://..." -routes`
+   * **iOS**: Paste the `ant://` URL into the AnonymousAnt app and tap **CONNECT**.
+
+See the full [Singapore Setup Guide](deploy/singapore/SINGAPORE_SETUP.md) for step-by-step screenshots and cloud provider walkthroughs.
 
 ---
 
