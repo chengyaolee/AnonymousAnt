@@ -51,7 +51,31 @@ func GetDefaultGateway() (gateway string, iface string, err error) {
 
 func (r *DarwinRouter) SetupRoutes(tunName, vpnServerIP, physicalGateway string) error {
 	r.tunName = tunName
-	r.vpnServerIP = vpnServerIP
+
+	host := vpnServerIP
+	if h, _, err := net.SplitHostPort(vpnServerIP); err == nil {
+		host = h
+	}
+
+	// Resolve hostname to IP if domain was provided
+	var targetIP net.IP
+	if ips, err := net.LookupIP(host); err == nil && len(ips) > 0 {
+		for _, ip := range ips {
+			if ip.To4() != nil {
+				targetIP = ip.To4()
+				break
+			}
+		}
+	}
+	if targetIP == nil {
+		targetIP = net.ParseIP(host)
+	}
+
+	if targetIP != nil {
+		r.vpnServerIP = targetIP.String()
+	} else {
+		r.vpnServerIP = host
+	}
 
 	if physicalGateway == "" {
 		gw, _, err := GetDefaultGateway()
@@ -63,24 +87,27 @@ func (r *DarwinRouter) SetupRoutes(tunName, vpnServerIP, physicalGateway string)
 	r.physicalGateway = physicalGateway
 
 	// 1. Add host route to VPN Server via physical gateway so tunnel packets don't loop
-	// Only needed if vpnServerIP is not loopback
-	ip := net.ParseIP(vpnServerIP)
-	if ip != nil && !ip.IsLoopback() {
-		security.Info("Preserving physical route to VPN server via gateway")
-		cmd := exec.Command("route", "add", "-host", vpnServerIP, physicalGateway)
+	// Only needed if vpnServerIP is a real remote host (not loopback)
+	if targetIP != nil && !targetIP.IsLoopback() {
+		security.Info("Preserving physical route to VPN server %s via gateway %s", r.vpnServerIP, physicalGateway)
+		cmd := exec.Command("route", "add", "-host", r.vpnServerIP, physicalGateway)
 		_ = cmd.Run()
-	}
 
-	// 2. Add two /1 subnets to cover 0.0.0.0/0 without overwriting the default gateway
-	security.Info("Routing all internet traffic via interface %s", tunName)
-	cmd1 := exec.Command("route", "add", "0.0.0.0/1", "-interface", tunName)
-	if out, err := cmd1.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to add 0.0.0.0/1 route: %s: %w", string(out), err)
-	}
+		// 2. Add two /1 subnets to cover 0.0.0.0/0 without overwriting the default gateway
+		security.Info("Routing all internet traffic via interface %s", tunName)
+		cmd1 := exec.Command("route", "add", "0.0.0.0/1", "-interface", tunName)
+		if out, err := cmd1.CombinedOutput(); err != nil {
+			return fmt.Errorf("failed to add 0.0.0.0/1 route: %s: %w", string(out), err)
+		}
 
-	cmd2 := exec.Command("route", "add", "128.0.0.0/1", "-interface", tunName)
-	if out, err := cmd2.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to add 128.0.0.0/1 route: %s: %w", string(out), err)
+		cmd2 := exec.Command("route", "add", "128.0.0.0/1", "-interface", tunName)
+		if out, err := cmd2.CombinedOutput(); err != nil {
+			return fmt.Errorf("failed to add 128.0.0.0/1 route: %s: %w", string(out), err)
+		}
+	} else {
+		// Loopback test mode: only route VPN subnet (10.8.0.0/24) to tun interface to prevent killing local internet
+		security.Info("Loopback testing detected: routing only 10.8.0.0/24 to %s", tunName)
+		_ = exec.Command("route", "add", "10.8.0.0/24", "-interface", tunName).Run()
 	}
 
 	return nil
@@ -91,6 +118,7 @@ func (r *DarwinRouter) RestoreRoutes() error {
 	if r.tunName != "" {
 		_ = exec.Command("route", "delete", "0.0.0.0/1", "-interface", r.tunName).Run()
 		_ = exec.Command("route", "delete", "128.0.0.0/1", "-interface", r.tunName).Run()
+		_ = exec.Command("route", "delete", "10.8.0.0/24", "-interface", r.tunName).Run()
 	}
 	if r.vpnServerIP != "" && r.physicalGateway != "" {
 		_ = exec.Command("route", "delete", "-host", r.vpnServerIP).Run()

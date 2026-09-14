@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"os/signal"
+	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -25,6 +28,7 @@ func main() {
 	tunName := flag.String("tun", "ant0", "TUN device name")
 	virtualIP := flag.String("ip", "10.8.0.1", "Virtual IPv4 assigned to server TUN")
 	peerIP := flag.String("peer-ip", "10.8.0.2", "Virtual IPv4 assigned to peer")
+	enableNAT := flag.Bool("nat", true, "Automatically configure IPv4 forwarding and NAT masquerade for exit routing")
 	verbose := flag.Bool("v", false, "Verbose output (redacted IPs)")
 	flag.Parse()
 
@@ -70,6 +74,11 @@ func main() {
 		defer tunDev.Close()
 		security.Info("TUN interface created: %s", tunDev.Name())
 		_ = tun.ConfigureIP(tunDev.Name(), *virtualIP, *peerIP)
+
+		if *enableNAT {
+			cleanupNAT := setupServerNAT(tunDev.Name(), *virtualIP)
+			defer cleanupNAT()
+		}
 	}
 
 	sessionMgr := protocol.NewSessionManager()
@@ -288,4 +297,29 @@ func handleIncomingPacket(
 		sessionMgr.Remove(h.ReceiverIndex)
 		security.Info("Client disconnected cleanly")
 	}
+}
+
+// setupServerNAT configures IP forwarding and NAT masquerade so the server acts as an exit node.
+func setupServerNAT(tunName, virtualSubnet string) func() {
+	if runtime.GOOS == "linux" {
+		_ = exec.Command("sysctl", "-w", "net.ipv4.ip_forward=1").Run()
+
+		out, err := exec.Command("sh", "-c", "ip route show default | awk '{print $5}'").Output()
+		wanIface := strings.TrimSpace(string(out))
+		if err == nil && wanIface != "" {
+			security.Info("Enabling NAT masquerade on WAN interface %s for subnet %s/24", wanIface, virtualSubnet)
+			_ = exec.Command("iptables", "-t", "nat", "-A", "POSTROUTING", "-s", virtualSubnet+"/24", "-o", wanIface, "-j", "MASQUERADE").Run()
+			_ = exec.Command("iptables", "-A", "FORWARD", "-i", tunName, "-j", "ACCEPT").Run()
+			_ = exec.Command("iptables", "-A", "FORWARD", "-m", "state", "--state", "RELATED,ESTABLISHED", "-j", "ACCEPT").Run()
+
+			return func() {
+				_ = exec.Command("iptables", "-t", "nat", "-D", "POSTROUTING", "-s", virtualSubnet+"/24", "-o", wanIface, "-j", "MASQUERADE").Run()
+				_ = exec.Command("iptables", "-D", "FORWARD", "-i", tunName, "-j", "ACCEPT").Run()
+				_ = exec.Command("iptables", "-D", "FORWARD", "-m", "state", "--state", "RELATED,ESTABLISHED", "-j", "ACCEPT").Run()
+			}
+		}
+	} else if runtime.GOOS == "darwin" {
+		_ = exec.Command("sysctl", "-w", "net.inet.ip.forwarding=1").Run()
+	}
+	return func() {}
 }
