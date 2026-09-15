@@ -129,35 +129,56 @@ See the full [Singapore Setup Guide](deploy/singapore/SINGAPORE_SETUP.md) for st
 
 ---
 
-## Native Platform Installations
+## 📦 App Downloads & Native Platform Installations
 
-### macOS
-```bash
-# Automated installer (registers LaunchDaemon)
-sudo ./build/macos/install.sh
+AnonymousAnt is packaged as standalone, native applications for macOS, Windows, and iOS.
 
-# Build DMG disk image
-./build/macos/build_dmg.sh
-```
+### 🍎 macOS (Apple Silicon Arm64)
+* **Prebuilt DMG**: [`build/dist/AnonymousAnt-macOS-arm64.dmg`](build/dist/AnonymousAnt-macOS-arm64.dmg) (8.4 MB)
+* **Installation**:
+  1. Open `AnonymousAnt-macOS-arm64.dmg` and drag `AnonymousAnt.app` into **Applications**.
+  2. Launch `AnonymousAnt.app`. If the privileged service is not running, click **"⚡ Authorize & Start Daemon"** to authorize with Touch ID or system password.
+  3. Paste your `ant://...` server URL and click **CONNECT**!
+* **Headless LaunchDaemon (Optional)**:
+  ```bash
+  sudo ./build/macos/install.sh
+  ```
+* **Rebuild DMG from Source**:
+  ```bash
+  ./build/macos/build_dmg.sh
+  ```
 
-### Windows
-1. Build Windows binaries:
-```bash
-GOOS=windows GOARCH=amd64 go build -o bin/windows/ant-daemon.exe ./cmd/ant-daemon
-GOOS=windows GOARCH=amd64 go build -o bin/windows/ant-ui.exe ./cmd/ant-ui
-GOOS=windows GOARCH=amd64 go build -o bin/windows/antclient.exe ./cmd/antclient
-```
-2. Place `wintun.dll` in `build/windows/wintun/` and compile the installer using Inno Setup:
-```cmd
-iscc build\windows\installer.iss
-```
+---
 
-### iOS
-1. Build the Go mobile XCFramework:
-```bash
-./build/ios/build_xcframework.sh
-```
-2. Open `build/ios/AnonymousAnt/` in Xcode. The project integrates `PacketTunnelProvider.swift` (`NEPacketTunnelProvider`) with SwiftUI `ContentView.swift`.
+### 🪟 Windows (x64)
+* **Portable Package**: [`build/dist/AnonymousAnt-Windows-x64.zip`](build/dist/AnonymousAnt-Windows-x64.zip) (8.4 MB)
+* **Installation**:
+  1. Extract `AnonymousAnt-Windows-x64.zip`.
+  2. Right-click `install_service.bat` and select **"Run as administrator"** to register and start the background tunnel driver service (includes official 64-bit Wintun driver).
+  3. Double-click `start_ui.bat` or `ant-ui.exe` to open the control interface.
+* **Inno Setup Single-File Installer**:
+  ```powershell
+  # Compile AnonymousAnt-Setup-x64.exe (requires Inno Setup 6)
+  powershell -ExecutionPolicy Bypass -File build/windows/build_installer.ps1
+  ```
+* **Rebuild Windows Package from Source**:
+  ```bash
+  bash build/windows/build_windows_dist.sh
+  ```
+
+---
+
+### 📱 iOS (iPhone & iPad)
+* **Web Download Portal**: Open [`deploy/ios/index.html`](deploy/ios/index.html) in Mobile Safari.
+* **Direct OTA Install**: Tap the **"📲 Direct Install on iOS (Safari OTA)"** button to install via `itms-services`.
+* **Sideloading Package**: [`build/dist/AnonymousAnt.ipa`](build/dist/AnonymousAnt.ipa) (44 KB)
+  * **AltStore**: Download `AnonymousAnt.ipa`, open with AltStore on iOS, and tap *Install*.
+  * **Sideloadly**: Connect iPhone to Mac/PC, drag `AnonymousAnt.ipa` into Sideloadly, and click *Start*.
+  * **TrollStore**: Direct installation without 7-day certificate expiration.
+* **Xcode Turnkey Project**:
+  1. Open `build/ios/AnonymousAnt.xcodeproj` in Xcode.
+  2. Select your Apple ID / Personal Team under **Signing & Capabilities**.
+  3. Plug in your iPhone and click **Run (Cmd+R)** to compile with full `NEPacketTunnelProvider` Network Extension support.
 
 ---
 

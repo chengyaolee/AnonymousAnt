@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download AnonymousAnt for iOS & Desktop</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --accent: #2ea043;
+      --accent-hover: #3fb950;
+      --primary: #58a6ff;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+    .container {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    }
+    .hero {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .app-icon {
+      width: 84px;
+      height: 84px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #0d1117, #161b22);
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      box-shadow: 0 8px 24px rgba(46, 160, 67, 0.3);
+    }
+    h1 {
+      font-size: 1.4rem;
+      color: #fff;
+    }
+    .badge-pill {
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(46, 160, 67, 0.15);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      margin-top: 14px;
+      box-shadow: 0 4px 16px rgba(46, 160, 67, 0.3);
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: #21262d;
+      color: var(--text);
+      border: 1px solid var(--border);
+      margin-top: 10px;
+    }
+    .btn-secondary:hover {
+      border-color: var(--text-muted);
+      color: #fff;
+    }
+    .section-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .guide-step {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+    .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #21262d;
+      color: var(--primary);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .platform-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .platform-card {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      text-decoration: none;
+      color: var(--text);
+      transition: border 0.2s;
+    }
+    .platform-card:hover {
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .platform-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .platform-meta {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Hero Header -->
+    <div class="card hero">
+      <div class="app-icon">🐜</div>
+      <h1>AnonymousAnt for iOS</h1>
+      <span class="badge-pill">v1.1.0 • Ephemeral VPN • Zero Logging</span>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">
+        High-speed chameleon VPN with Noise IK encryption and anti-DPI masking.
+      </p>
+
+      <!-- 1-Tap Safari OTA Installer -->
+      <a class="btn btn-primary" href="itms-services://?action=download-manifest&url=https://raw.githubusercontent.com/chengyaolee/AnonymousAnt/main/deploy/ios/manifest.plist">
+        📲 Direct Install on iOS (Safari OTA)
+      </a>
+
+      <!-- Direct IPA Download -->
+      <a class="btn btn-secondary" href="https://raw.githubusercontent.com/chengyaolee/AnonymousAnt/main/build/dist/AnonymousAnt.ipa" download>
+        📦 Download AnonymousAnt.ipa (44 KB)
+      </a>
+    </div>
+
+    <!-- Sideloading Instructions -->
+    <div class="card">
+      <div class="section-title">📱 Easy Sideloading Options</div>
+      
+      <div class="guide-step">
+        <div class="step-num">1</div>
+        <div>
+          <strong style="color: #fff;">AltStore (Recommended):</strong><br>
+          Download the <code>.ipa</code> above, open it in <strong>AltStore</strong> on your iPhone, and tap <em>Install</em>.
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="step-num">2</div>
+        <div>
+          <strong style="color: #fff;">Sideloadly / Scarlet:</strong><br>
+          Connect your iPhone to Mac or PC, drag <code>AnonymousAnt.ipa</code> into Sideloadly, enter your Apple ID, and click <em>Start</em>.
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="step-num">3</div>
+        <div>
+          <strong style="color: #fff;">TrollStore:</strong><br>
+          On iOS versions supported by TrollStore, tap <em>Open in TrollStore</em> for instant, permanent installation without weekly refresh.
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="step-num">4</div>
+        <div>
+          <strong style="color: #fff;">Xcode Native Build:</strong><br>
+          Open <code>build/ios/AnonymousAnt.xcodeproj</code> in Xcode, select your Personal Team under Signing & Capabilities, and hit <strong>Cmd+R</strong>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Desktop Downloads -->
+    <div class="card">
+      <div class="section-title">💻 Also Available on Desktop</div>
+      <div class="platform-grid">
+        <a class="platform-card" href="https://raw.githubusercontent.com/chengyaolee/AnonymousAnt/main/build/dist/AnonymousAnt-macOS-arm64.dmg" download>
+          <div style="font-size: 20px;">🍎</div>
+          <div class="platform-name">macOS (Arm64)</div>
+          <div class="platform-meta">.DMG Installer (8.4 MB)</div>
+        </a>
+        <a class="platform-card" href="https://raw.githubusercontent.com/chengyaolee/AnonymousAnt/main/build/dist/AnonymousAnt-Windows-x64.zip" download>
+          <div style="font-size: 20px;">🪟</div>
+          <div class="platform-name">Windows (x64)</div>
+          <div class="platform-meta">Portable + Wintun (8.4 MB)</div>
+        </a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
