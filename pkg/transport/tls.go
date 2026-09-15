@@ -13,6 +13,7 @@ import (
 	"io"
 	"math/big"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -112,6 +113,17 @@ func NewTLSServerTransport(listenAddr string, cert *tls.Certificate) (*TLSTransp
 
 // NewTLSClientTransport connects to a remote TLS 443 exit node using SNI masquerading.
 func NewTLSClientTransport(serverAddr, sni string) (*TLSTransport, error) {
+	serverAddr = strings.TrimSpace(serverAddr)
+	if strings.Contains(serverAddr, "::") && !strings.HasPrefix(serverAddr, "[") {
+		serverAddr = strings.ReplaceAll(serverAddr, "::", ":")
+	}
+	if strings.HasSuffix(serverAddr, ":") {
+		serverAddr += "8443"
+	}
+	if !strings.Contains(serverAddr, ":") {
+		serverAddr = net.JoinHostPort(serverAddr, "8443")
+	}
+
 	if sni == "" {
 		host, _, err := net.SplitHostPort(serverAddr)
 		if err == nil {

@@ -387,6 +387,8 @@
             const [k, v] = param.split("=");
             if (k === "obfs") transport = v;
           });
+        if (host.includes("::") && !host.startsWith("[")) {
+          host = host.replace(/::+/g, ":");
         }
         document.getElementById("serverAddr").value = host;
         document.getElementById("transportMode").value = transport;
@@ -478,7 +480,15 @@
       if (isConnected) {
         await fetch("/api/disconnect", { method: "POST" });
       } else {
-        const serverAddr = document.getElementById("serverAddr").value.trim();
+        let serverAddr = document.getElementById("serverAddr").value.trim();
+        if (serverAddr.includes("::") && !serverAddr.startsWith("[")) {
+          serverAddr = serverAddr.replace(/::+/g, ":");
+          document.getElementById("serverAddr").value = serverAddr;
+        }
+        if (!serverAddr.includes(":") && serverAddr.length > 0) {
+          serverAddr = serverAddr + ":8443";
+          document.getElementById("serverAddr").value = serverAddr;
+        }
         const serverKey = document.getElementById("serverKey").value.trim();
         const transport = document.getElementById("transportMode").value;
 

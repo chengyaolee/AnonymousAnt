@@ -60,9 +60,14 @@ func main() {
 	}
 	defer serverPriv.Wipe()
 
+	tlsPort := strings.TrimPrefix(*tlsListen, ":")
+	if _, p, err := net.SplitHostPort(*tlsListen); err == nil {
+		tlsPort = p
+	}
+
 	fmt.Println("==================================================================")
 	fmt.Printf(" Server Public Key:  %s\n", serverPub.Base64())
-	fmt.Printf(" Connection String:  ant://%s@<SERVER_HOST>:%s?obfs=tls\n", serverPub.Base64(), *tlsListen)
+	fmt.Printf(" Connection String:  ant://%s@<SERVER_HOST>:%s?obfs=tls\n", serverPub.Base64(), tlsPort)
 	fmt.Println("==================================================================")
 
 	// Create TUN interface

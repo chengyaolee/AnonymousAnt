@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -54,9 +55,25 @@ func (d *DaemonState) Handle(req ipc.Request) ipc.Response {
 	}
 }
 
+func sanitizeAddress(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if strings.Contains(raw, "::") && !strings.HasPrefix(raw, "[") {
+		raw = strings.ReplaceAll(raw, "::", ":")
+	}
+	if strings.HasSuffix(raw, ":") {
+		return raw + "8443"
+	}
+	if !strings.Contains(raw, ":") {
+		return net.JoinHostPort(raw, "8443")
+	}
+	return raw
+}
+
 func (d *DaemonState) handleConnect(params ipc.ConnectParams) ipc.Response {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+
+	params.ServerAddr = sanitizeAddress(params.ServerAddr)
 
 	if d.connected {
 		return ipc.Response{Success: false, Error: "already connected"}

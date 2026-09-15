@@ -307,6 +307,16 @@ func ParseURL(url string) (pubKey, host, transportMode, sni string, err error) {
 			}
 		}
 	}
-	host = hostPart
+
+	host = strings.TrimSpace(hostPart)
+	if strings.Contains(host, "::") && !strings.HasPrefix(host, "[") {
+		host = strings.ReplaceAll(host, "::", ":")
+	}
+	if strings.HasSuffix(host, ":") {
+		host += "8443"
+	}
+	if !strings.Contains(host, ":") {
+		host = net.JoinHostPort(host, "8443")
+	}
 	return pubKey, host, transportMode, sni, nil
 }
