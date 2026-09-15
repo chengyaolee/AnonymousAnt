@@ -91,9 +91,21 @@ sudo ./bin/antclient \
 ```
 
 ### Method 3: iOS (iPhone / iPad)
-1. Open the AnonymousAnt iOS app.
-2. Paste the `ant://...` URL or scan the QR code.
-3. Tap **CONNECT**.
+
+#### Option A: Zero-Developer-Fee QR Scan (Easiest & Free)
+If you don't have a paid $99/year Apple Developer Account (which Apple requires for custom Network Extensions in Xcode), run this 1-command companion on your Singapore VPS:
+```bash
+curl -sSL https://raw.githubusercontent.com/chengyaolee/AnonymousAnt/main/deploy/singapore/add_wireguard_ios.sh | sudo bash
+```
+1. Install the free **WireGuard** app from the official iOS App Store.
+2. Open WireGuard $\to$ tap **"+"** $\to$ **"Create from QR code"**.
+3. Point your iPhone camera at the terminal QR code, name it `Singapore`, and toggle **ON**!
+
+#### Option B: Native AnonymousAnt iOS App
+*(Requires an Apple Developer Account with Network Extension capability)*:
+1. Open `build/ios/AnonymousAnt.xcodeproj` in Xcode.
+2. Select your paid Apple Developer Team under **Signing & Capabilities**.
+3. Deploy to iPhone $\to$ paste the `ant://...` URL $\to$ tap **CONNECT**.
 
 ---
 
