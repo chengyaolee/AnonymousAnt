@@ -112,17 +112,28 @@ if command -v ufw &>/dev/null && ufw status | grep -q "active"; then
     ufw allow 8443/tcp
 fi
 
-sleep 1
+sleep 2
+
+PUB_KEY=$(journalctl -u anonymousant-server -n 30 --no-pager | grep "Server Public Key:" | tail -n 1 | awk '{print $NF}')
 
 echo ""
 echo "=================================================================="
-echo "🎉 Singapore Exit Node is RUNNING!"
+echo "🎉 Singapore Exit Node is UP & RUNNING!"
 echo "=================================================================="
 echo "Server Public IP:  ${PUBLIC_IP}"
+if [[ -n "${PUB_KEY}" ]]; then
+    echo "Server Public Key: ${PUB_KEY}"
+    echo ""
+    echo "🔗 YOUR 1-CLICK CONNECTION URL:"
+    echo "   ant://${PUB_KEY}@${PUBLIC_IP}:8443?obfs=tls"
+else
+    echo ""
+    echo "To view your connection string, run:"
+    echo "  journalctl -u anonymousant-server -n 20 --no-pager"
+fi
 echo ""
-echo "To view your connection string, run:"
-echo "  journalctl -u anonymousant-server -n 20 --no-pager"
-echo ""
-echo "Or check the server logs at any time with:"
-echo "  systemctl status anonymousant-server"
+echo "📱 How to Connect:"
+echo "1. Copy the 'ant://...' string above."
+echo "2. Open AnonymousAnt on your Mac, Windows, or iOS device."
+echo "3. Paste into the Connection URL field and click CONNECT!"
 echo "=================================================================="
