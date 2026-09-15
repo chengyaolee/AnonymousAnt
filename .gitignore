@@ -9,6 +9,8 @@
 *.dylib
 bin/
 build/dist/
+build/windows/.wintun_cache/
+build/windows/staging/
 .DS_Store
 /antserver
 /antclient
